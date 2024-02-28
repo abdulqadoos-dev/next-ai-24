@@ -1,11 +1,13 @@
-import { kv } from '@vercel/kv'
+
 import { OpenAIStream, StreamingTextResponse } from 'ai'
 import OpenAI from 'openai'
 
 import { auth } from '@/auth'
 import { nanoid } from '@/lib/utils'
+import {Client, connect} from '@/lib/database/redis';
 
-export const runtime = 'edge'
+
+// export const runtime = 'edge'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -53,10 +55,12 @@ export async function POST(req: Request) {
           }
         ]
       }
-      await kv.hmset(`chat:${id}`, payload)
-      await kv.zadd(`user:chat:${userId}`, {
+
+      await connect();
+      await Client.hSet(`chat:${id}`, 'chat', JSON.stringify(payload));
+      await Client.zAdd(`user:chat:${userId}`, {
         score: createdAt,
-        member: `chat:${id}`
+        value: `chat:${id}`
       })
     }
   })
